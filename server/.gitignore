@@ -1,0 +1,6 @@
+/venv/
+/node_modules/
+/web/static/CACHE/
+/web/static/web/output.css
+/db.sqlite3
+/static_root/
