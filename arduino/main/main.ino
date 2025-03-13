@@ -10,7 +10,6 @@
 #include "HX711.h"
 #include <SPI.h>
 #include <MFRC522.h>
-#include <LiquidCrystal_I2C.h>
 
 // Pin Setup
 const int LOADCELL_DOUT_PIN = 2;
@@ -30,11 +29,7 @@ String serverPath = "http://192.168.8.101:8000";        // Local HTTP Server
 String uploadServerPath = serverPath + "/api/upload/";  // HTTP endpoint for data upload
 
 
-int lcdColumns = 16;
-int lcdRows = 2;
-
 // Initialization
-
 WiFiClient client;  // Local WiFi Client [HTTP]
 HTTPClient http;
 
@@ -86,19 +81,10 @@ void setup() {
   Serial.println(F("This code scan the MIFARE Classsic NUID."));
   Serial.print(F("Using the following key:"));
   printHex(key.keyByte, MFRC522::MF_KEY_SIZE);
-
-
-  // initialize LCD
-  lcd.init();
-  lcd.backlight();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  lcd.setCursor(0, 0);
-  lcd.print("Hello, World!");
-  lcd.clear();
 
   Serial.print("SCALE READING:\t");
   Serial.print(scale.read_average(20));
