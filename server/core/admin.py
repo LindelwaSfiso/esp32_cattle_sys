@@ -5,7 +5,7 @@ from core.models import Cow, WeightRecording
 @admin.register(Cow)
 class CowAdmin(admin.ModelAdmin):
     list_per_page = 25
-    list_display = ["id", "rfid", "breed_str", "gender"]
+    list_display = ["id", "rfid", "breed_str", "gender", "date_of_birth"]
 
     def breed_str(self, cow):
         return cow.get_breed_display()
