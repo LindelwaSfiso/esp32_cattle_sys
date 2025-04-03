@@ -36,15 +36,15 @@
 #define PROCESS_BUTTON_PIN 13
 
 // hx711 setup variables
-#define SCALE_CALIBRATION_FACTOR 1
-#define SCALE_OFFSET_FACTOR 1
+#define SCALE_CALIBRATION_FACTOR 110.321114
+#define SCALE_OFFSET_FACTOR 458042
 
 const char* ssid = "Lindelwa";
 const char* password = "123456789";
 
 
-String serverPath = "http://192.168.8.101:8000";        // Local HTTP Server
-String uploadServerPath = serverPath + "/api/upload/";  // HTTP endpoint for data upload
+String serverName = "http://192.168.8.101:8000";        // Local HTTP Server
+String uploadServerPath = serverName + "/api/upload/";  // HTTP endpoint for data upload
 
 
 // Initialization
@@ -74,7 +74,7 @@ bool shouldOpenGates = true;
 
 bool isOpenGateOpen = false;
 bool isCloseGateOpen = false;
-
+bool isCowPresentForProcessing = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -118,8 +118,8 @@ void setup() {
   Serial.print("\nInitializing HX711 scale.......\n");
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
-  scale.set_scale(SCALE_CALIBRATION_FACTOR);
   scale.set_offset(SCALE_OFFSET_FACTOR);
+  scale.set_scale(SCALE_CALIBRATION_FACTOR);
   scale.tare();
 
 
@@ -141,8 +141,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  bool isCowPresentForProcessing = false;
 
   // check if the open button is pressed
   if (buttonPressed(OPEN_BUTTON_PIN, lastOpenButtonState, lastOpenDebounceTime) && shouldOpenGates) {
@@ -197,10 +195,10 @@ void readValuesAndUpload() {
   }
 
   // get cow reading
-  float wight = getScaleReading();
+  float weight = getScaleReading();
 
   // then upload
-  bool isUploadSuccessful = remoteServerUploadData(weight, rfid);
+  bool isUploadSuccessful = remoteServerUploadData(weight, readTag);
 
   if (isUploadSuccessful) {
     // server upload was successful,
@@ -240,7 +238,7 @@ bool remoteServerUploadData(float weight, String rfid) {
     requestData.concat("\"}");
 
     // Send HTTP POST Request, and Check response code
-    int httpResponseCode = http.POST(httpRequestData);
+    int httpResponseCode = http.POST(requestData);
 
     // Check HTTP Response Code :: Success Status
     if (httpResponseCode == 200) {
@@ -315,20 +313,15 @@ String readScannedCard() {
 
 
 /**
-* Function to check if a button is pressed, note the button state is passed by reference
-* It also includes a debounce trick to minimize power in between processes 
+* Function to check if a button is pressed, note the button state is passed by reference 
 */
 bool buttonPressed(int pin, int& lastButtonState, unsigned long& lastDebounceTime) {
   int buttonState = digitalRead(pin);
   if (buttonState != lastButtonState) {
-    lastDebounceTime = millis();
-  }
-  if ((millis() - lastDebounceTime) > 100) {
-    if (buttonState != lastButtonState) {
-      lastButtonState = buttonState;
-      if (lastButtonState == LOW) {
-        return true;
-      }
+    lastButtonState = buttonState;
+    if (lastButtonState == LOW) {
+      delay(500);
+      return true;
     }
   }
   return false;
@@ -378,11 +371,13 @@ void operateOpeningMotor(bool shouldOpen) {
       openServo.write(pos);                    // tell servo to go to position in variable 'pos'
       delay(15);                               // waits 15ms for the servo to reach the position
     }
+    Serial.println("Opening gate status: OPEN\n");
   } else {
-    for (pos = 170; pos >= 0; pos -= 1) {  // goes from 180 degrees to 0 degrees
-      openServo.write(pos);                // tell servo to go to position in variable 'pos'
-      delay(15);                           // waits 15ms for the servo to reach the position
+    for (int pos = 170; pos >= 0; pos -= 1) {  // goes from 180 degrees to 0 degrees
+      openServo.write(pos);                    // tell servo to go to position in variable 'pos'
+      delay(15);                               // waits 15ms for the servo to reach the position
     }
+    Serial.println("Opening gate status: CLOSED\n");
   }
 
   // update the state of the open servo motor
@@ -395,13 +390,14 @@ void operateClosingMotor(bool shouldOpen) {
       closeServo.write(pos);                   // tell servo to go to position in variable 'pos'
       delay(15);                               // waits 15ms for the servo to reach the position
     }
-
+    Serial.println("Closing gate status: OPEN\n");
 
   } else {
-    for (pos = 170; pos >= 0; pos -= 1) {  // goes from 180 degrees to 0 degrees
-      closeServo.write(pos);               // tell servo to go to position in variable 'pos'
-      delay(15);                           // waits 15ms for the servo to reach the position
+    for (int pos = 170; pos >= 0; pos -= 1) {  // goes from 180 degrees to 0 degrees
+      closeServo.write(pos);                   // tell servo to go to position in variable 'pos'
+      delay(15);                               // waits 15ms for the servo to reach the position
     }
+    Serial.println("Closing gate status: CLOSED\n");
   }
 
   // update the state of the close servo motor
