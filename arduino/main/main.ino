@@ -4,7 +4,6 @@
 
 // Library imports
 #include <WiFi.h>
-#include <WiFiMulti.h>
 #include <HTTPClient.h>
 
 // mfrc522 rfid headers
@@ -17,13 +16,16 @@
 // hx711 headers
 #include "HX711.h"
 
+// LCD
+#include <LiquidCrystal_I2C.h>
+
 // hx711 pin setup
 #define LOADCELL_DOUT_PIN 16
 #define LOADCELL_SCK_PIN 4
 
 // mfrc522 rfid pin setup
 #define SS_PIN 5
-#define RST_PIN 21
+#define RST_PIN 3
 
 // servo motors pins
 #define OPEN_SERVO_PIN 25
@@ -39,8 +41,8 @@
 #define SCALE_CALIBRATION_FACTOR 110.321114
 #define SCALE_OFFSET_FACTOR 458042
 
-const char* ssid = "Lindelwa";
-const char* password = "123456789";
+const char* ssid = "HUAWEI-E456";
+const char* password = "51B7QLRH371";
 
 
 String serverName = "http://192.168.8.101:8000";        // Local HTTP Server
@@ -54,8 +56,10 @@ HTTPClient http;
 HX711 scale;
 MFRC522 rfid(SS_PIN, RST_PIN);
 
-
 MFRC522::MIFARE_Key key;
+
+// setup LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // motors setup
 Servo openServo, closeServo;
@@ -97,6 +101,16 @@ void setup() {
   closeServo.write(0);
   delay(1000);
 
+  Serial.print("\nSetting up LCD.......\n");
+  lcd.begin();
+  lcd.backlight();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting......");
+  lcd.setCursor(0, 1);
+  lcd.print(String(ssid));
+
   Serial.print("\nSetting up push buttons.......\n");
   pinMode(OPEN_BUTTON_PIN, INPUT_PULLUP);
   pinMode(CLOSE_BUTTON_PIN, INPUT_PULLUP);
@@ -114,6 +128,13 @@ void setup() {
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
   Serial.println("\n");
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Connected - WiFi");
+  lcd.setCursor(0, 1);
+  lcd.print(String(ssid));
+  delay(1000);
 
   Serial.print("\nInitializing HX711 scale.......\n");
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
@@ -137,6 +158,8 @@ void setup() {
   Serial.println("\n");
 
   Serial.print("\nDONE SETUP, ENTERING LOOP PROCESS......\n");
+
+  printGateStatus();
 }
 
 void loop() {
@@ -150,7 +173,9 @@ void loop() {
 
     // if we just closed the opening gate
     // we assume there is a cow in the scale therefore change the flag isCowPresentForProcessing to true
-    isCowPresentForProcessing = !isOpenGateOpen;
+    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen;
+
+    printGateStatus();
   }
 
 
@@ -159,8 +184,11 @@ void loop() {
     // toogle the state of the closing gate
     // if it was previously open, close it, visa versa
     operateClosingMotor(!isCloseGateOpen);
+
     // if the gate is open, we assume there is no cow for processing, visa versa
-    isCowPresentForProcessing = !isCloseGateOpen;
+    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen;
+
+    printGateStatus();
   }
 
 
@@ -174,6 +202,25 @@ void loop() {
 }
 
 
+void printGateStatus() {
+  if (isCowPresentForProcessing) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Cow Ready. Gates");
+    lcd.setCursor(0, 1);
+    lcd.print("Closed *press 3*");
+  } else {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("O. Gate:  ");
+    lcd.print(isOpenGateOpen ? "OPEN" : "CLOSED");
+    lcd.setCursor(0, 1);
+    lcd.print("C. Gate:  ");
+    lcd.print(isCloseGateOpen ? "OPEN" : "CLOSED");
+  }
+}
+
+
 /** 
 * Function to read rfid and weight readings and upload to the server
 * attempt to wait 3 seconds for cow to get to position and align with the rfid
@@ -181,8 +228,14 @@ void loop() {
 * attempt to read the rfid, and the weight
 */
 void readValuesAndUpload() {
-  Serial.println("Delaying 3s for cow to settle down on the sacale and align with rfid correctly.......");
-  delay(3000);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Wait 2s for cow ");
+  lcd.setCursor(0, 1);
+  lcd.print("to settle proper");
+
+  Serial.println("Delaying 2s for cow to settle down on the sacale and align with rfid correctly.......");
+  delay(2000);
 
   // then read the rfid, and read the weight
   String readTag = readScannedCard();
@@ -191,11 +244,30 @@ void readValuesAndUpload() {
   // attempt to try notify farmer to position the cow correctly
   if (readTag.length() == 0) {
     Serial.println("Failed to read rfid, the cow is not positioned corrently, very far from the reader........");
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Failed to get...");
+    lcd.setCursor(0, 1);
+    lcd.print("RFID Tag...Try a");
+    
     return;  // fatal exit!
   }
 
   // get cow reading
   float weight = getScaleReading();
+
+  if (weight < 0) {
+    Serial.println("Failed to read weight, nothing on scale or scale is not working");
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Failed to get...");
+    lcd.setCursor(0, 1);
+    lcd.print("WEIGHT...Try again");
+    
+    return;  // fatal exit!
+  }
 
   // then upload
   bool isUploadSuccessful = remoteServerUploadData(weight, readTag);
@@ -203,9 +275,28 @@ void readValuesAndUpload() {
   if (isUploadSuccessful) {
     // server upload was successful,
     Serial.println("Done Upload.... Open the closing gate.......");
+
+    operateClosingMotor(!isCloseGateOpen);
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Upload successful");
+    lcd.setCursor(0, 1);
+    lcd.print("opening C. Gate..");
+    delay(2000);
+
+    printGateStatus();
+
   } else {
     // failed
     Serial.println("Failed to upload, try again.......");
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Upload failed....");
+    lcd.setCursor(0, 1);
+    lcd.print("Try again........");
+    delay(200);
   }
 }
 
@@ -214,6 +305,13 @@ Function to upload weight data to our remote server,
 returns true if the upload was successfull
 */
 bool remoteServerUploadData(float weight, String rfid) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Read data OKAY..");
+  lcd.setCursor(0, 1);
+  lcd.print("uploading.......");
+  delay(200);
+
   bool isSuccessful = false;
   Serial.println("Uploading data to the server.....");
 
@@ -266,8 +364,13 @@ bool remoteServerUploadData(float weight, String rfid) {
 
 
 float getScaleReading() {
-  Serial.println("Getting scale reading.....");
-  return scale.get_units(10);
+  Serial.print("Getting scale reading.....Weight: ");
+  float weight = scale.get_units(10);
+  
+  Serial.print(weight);
+  Serial.println(" g\n");
+
+  return weight;
 }
 
 
@@ -337,6 +440,7 @@ void printHex(byte* buffer, byte bufferSize) {
     Serial.print(buffer[i], HEX);
   }
 }
+
 
 /**
  * Helper routine to dump a byte array as dec values to Serial.

@@ -14,31 +14,168 @@
     </section>
 
 
+    <section class="pt-2">
+        <div class="pb-8 flex flex-col">
+            <h1 class="mb-4 text-base font-extrabold tracking-tight leading-none md:text-xl lg:text-2xl">
+                Esp32 Live Records
+            </h1>
+            <p class="text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-600">
+                See your Esp32 weight recordings update in realtime.
+            </p>
+        </div>
+    </section>
 
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg bg-gray-900 mb-10">
+        <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-white">
+            <thead class="text-sm text-gray-700 uppercase dark:text-white border-b border-gray-600">
+            <tr>
+                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                    Cow RFID Tag
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Cow Breed
+                </th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                    Gender
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Recorded At
+                </th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                    Weight (Kg)
+                </th>
+            </tr>
+            </thead>
+            <tbody>
 
-    <div class="max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-300 dark:border-gray-400">
-        <a href="#">
-            <h5 class="mb-2 text-2xl font-semibold tracking-tight text-gray-900">
-                Most recent weight recording:
-            </h5>
-        </a>
-        <p class="mb-3 font-normal text-gray-500 dark:text-gray-600">
-            Go to this step by step guideline process on how to
-            certify for your weekly benefits:
-        </p>
-        <a href='{% url "web:recordings" %}' class="inline-flex font-medium items-center text-blue-600 hover:underline">
-            See records history
-            <svg class="w-3 h-3 ms-2.5 rtl:rotate-[270deg]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                 fill="none" viewBox="0 0 18 18">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 11v4.833A1.166 1.166 0 0 1 13.833 17H2.167A1.167 1.167 0 0 1 1 15.833V4.167A1.166 1.166 0 0 1 2.167 3h4.618m4.447-2H17v5.768M9.111 8.889l7.778-7.778"></path>
-            </svg>
-        </a>
+            {% if records %}
+
+                {% for record in records %}
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th scope="row"
+                            class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
+                            {{ record.cow.rfid }}
+                        </th>
+                        <td class="px-6 py-4">
+                            {{ record.cow.breed }}
+                        </td>
+                        <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                            {{ record.cow.get_breed_display }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {{ record.created_at|date:'H:i d/m/Y' }}
+                        </td>
+                        <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                            {{ record.weight }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <th scope="row" colspan="5"
+                            class="text-center px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
+                            You have no records yet!!
+                        </th>
+                    </tr>
+                {% endfor %}
+
+            {% endif %}
+
+            </tbody>
+        </table>
     </div>
 
+    <div id="toast"
+         class="hidden z-[100] fixed flex items-center w-full max-w-xs p-4 space-x-4 text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-sm right-5 bottom-5 dark:text-gray-200 dark:divide-gray-700 dark:bg-gray-800"
+         role="alert">
+        <div class="text-base font-normal">
+        </div>
+    </div>
+
+{% endblock %}
 
 
+{% block js %}
+    <script type="text/javascript">
+        $(function () {
+            let isSending = false;
+            const toastElement = $('#toast');
 
+            function showToast(message) {
+                toastElement.find('.font-normal').text(message);
+                toastElement.removeClass('hidden').addClass('flex');
+                setTimeout(() => {
+                    toastElement.removeClass('flex').addClass('hidden');
+                }, 3000);
+            }
 
+            function fetchRecentData() {
+                if (isSending) return;
+                isSending = true;
 
+                $.ajax({
+                    type: 'get',
+                    url: '/api/recent-data/',
+                    success: function (data) {
+                        console.log(data);
+                        isSending = false;
+
+                        if (data.message) {
+                            showToast(data.message);
+                        }
+
+                        if (data.data && Array.isArray(data.data)) {
+                            const tableBody = $('tbody');
+                            tableBody.empty(); // Clear existing rows
+
+                            if (data.data.length > 0) {
+                                data.data.forEach(record => {
+                                    const row = `
+                                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                                <th scope="row"
+                                                    class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
+                                                    ${record.cow.rfid}
+                                                </th>
+                                                <td class="px-6 py-4">
+                                                    ${record.cow.breed}
+                                                </td>
+                                                <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                                                    ${record.cow.breed_display}
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    ${new Date(record.created_at).toLocaleString()}
+                                                </td>
+                                                <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                                                    ${record.weight}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    tableBody.append(row);
+                                });
+                            } else {
+                                tableBody.append(`
+                                        <tr>
+                                            <th scope="row" colspan="5"
+                                                class="text-center px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
+                                                No recent records found.
+                                            </th>
+                                        </tr>
+                                    `);
+                            }
+                        }
+                    },
+                    error: function (error) {
+                        console.error("Error fetching data:", error);
+                        isSending = false;
+                        showToast("Error fetching recent data.");
+                    }
+                });
+            }
+
+            // Fetch data every 10 seconds
+            setInterval(fetchRecentData, 10000);
+
+            // Initial fetch when the page loads
+            // fetchRecentData(); // We will load initial data with the Django template
+        });
+    </script>
 {% endblock %}
