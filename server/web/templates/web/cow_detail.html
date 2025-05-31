@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Cow Performance: {{ cow.rfid }}{% endblock %}
+
+{% block content %}
+
+    <section class="pt-12">
+        <div class="py-8 flex flex-col">
+            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl text-gray-900 dark:text-white">
+                Cow Performance: {{ cow.rfid }}
+            </h1>
+            <p class="mb-8 text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-400">
+                Detailed weight history and insights for this individual cow.
+            </p>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Cow Information</h3>
+            <div class="space-y-3 text-gray-700 dark:text-gray-300">
+                <p><strong class="text-gray-900 dark:text-white">RFID Tag:</strong> {{ cow.rfid }}</p>
+                <p><strong class="text-gray-900 dark:text-white">Breed:</strong> {{ cow.get_breed_display }}</p>
+                <p><strong class="text-gray-900 dark:text-white">Gender:</strong> {{ cow.get_gender_display }}</p>
+                <p><strong class="text-gray-900 dark:text-white">Date of
+                    Birth:</strong> {{ cow.date_of_birth|date:"M d, Y" }}</p>
+                <p><strong class="text-gray-900 dark:text-white">Feeding
+                    Scheme:</strong> {{ cow.get_feeding_scheme_display }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Weight Overview</h3>
+            <div class="space-y-3 text-gray-700 dark:text-gray-300">
+                <p><strong class="text-gray-900 dark:text-white">Total Recordings:</strong> {{ cow.weights.count }}</p>
+                <p><strong class="text-gray-900 dark:text-white">Latest Weight:</strong>
+                    {% if cow.weights.first %}
+                        {{ cow.weights.first.weight }} kg ({{ cow.weights.first.created_at|date:"M d, Y H:i" }})
+                    {% else %}
+                        No weight recorded yet.
+                    {% endif %}
+                </p>
+                {% if cow.weights.count > 0 %}
+                    <p><strong class="text-gray-900 dark:text-white">First Recorded
+                        Weight:</strong> {{ cow.weights.last.weight }} kg</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 mb-10 border border-gray-200 dark:border-gray-700">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Weight Performance Over Time</h3>
+        <div id="cow-performance-chart"></div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    {{ chart_dates|json_script:"chart_dates" }}
+    {{ chart_weights|json_script:"chart_weights" }}
+
+    <script type="text/javascript" src="{% static 'web/apexcharts.min.js' %}"></script>
+    <script type="text/javascript">
+        // Parse JSON strings into JavaScript arrays
+        const dates = JSON.parse(document.getElementById('chart_dates').textContent);
+        const weights = JSON.parse(document.getElementById('chart_weights').textContent);
+
+        const options = {
+            series: [{
+                name: 'Weight (kg)',
+                data: weights
+            }],
+            chart: {
+                type: 'line',
+                height: 650,
+                fontFamily: "Inter, sans-serif",
+                dropShadow: {
+                    enabled: false,
+                },
+                toolbar: {
+                    show: true, // Allow zooming, pan, etc.
+                    tools: {
+                        download: true,
+                        selection: false,
+                        zoom: false,
+                        zoomin: false,
+                        zoomout: false,
+                        pan: false,
+                        reset: false,
+                        customIcons: []
+                    },
+                },
+                zoom: {
+                    enabled: false // Enable zooming
+                },
+                background: document.documentElement.classList.contains('dark') ? '#1F2937' : '#FFFFFF',
+            },
+            colors: ['#3B82F6'], // A nice blue color
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 4
+            },
+            grid: {
+                borderColor: '#e7e7e7',
+                strokeDashArray: 4,
+                xaxis: {
+                    lines: {
+                        show: true
+                    }
+                },
+                yaxis: {
+                    lines: {
+                        show: true
+                    }
+                },
+                padding: {
+                    left: 2,
+                    right: 2,
+                    top: 12,
+                    bottom: 0
+                },
+            },
+            xaxis: {
+                type: 'datetime',
+                categories: dates, // Dates are already ISO strings
+                labels: {
+                    format: 'MMM dd, yyyy', // Corrected format for display
+                    style: {
+                        fontFamily: "Inter, sans-serif",
+                        cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+                    }
+                },
+                title: {
+                    text: 'Date',
+                    style: {
+                        color: '#6B7280', // Tailwind gray-500
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif',
+                        fontWeight: 600,
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    formatter: function (value) {
+                        return value.toFixed(2) + " kg"; // Format with 2 decimal places
+                    },
+                    style: {
+                        fontFamily: "Inter, sans-serif",
+                        cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+                    }
+                },
+                title: {
+                    text: 'Weight (kg)',
+                    style: {
+                        color: '#6B7280', // Tailwind gray-500
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif',
+                        fontWeight: 600,
+                    }
+                },
+                min: function (min) {
+                    return Math.max(0, min - 10);
+                }, // Add some padding below min
+                max: function (max) {
+                    return max + 10;
+                } // Add some padding above max
+            },
+            tooltip: {
+                x: {
+                    format: 'dd MMM yyyy HH:mm' // Corrected format for tooltip
+                },
+                y: {
+                    formatter: function (val) {
+                        return val.toFixed(2) + " kg"
+                    }
+                }
+            },
+            theme: {
+                mode: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+            }
+        };
+
+        if (document.getElementById("cow-performance-chart") && typeof ApexCharts !== 'undefined') {
+            const chart = new ApexCharts(document.getElementById("cow-performance-chart"), options);
+            chart.render();
+        }
+    </script>
+{% endblock %}

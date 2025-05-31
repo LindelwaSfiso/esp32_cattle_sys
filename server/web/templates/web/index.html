@@ -2,46 +2,47 @@
 
 {% block content %}
 
-    <section class="pt-12">
-        <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
-            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl">
+    <section
+            class="py-16 text-center bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-700 dark:to-purple-800 text-white rounded-lg shadow-lg mb-10">
+        <div class="px-4 mx-auto max-w-screen-xl">
+            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl text-white">
                 Welcome to Cattle Management System
             </h1>
-            <p class="mb-8 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 lg:px-48 dark:text-gray-600">
+            <p class="mb-8 text-lg font-light lg:text-xl sm:px-16 lg:px-48 text-blue-100 dark:text-blue-200">
                 Oversee, track, and explore insights regarding your livestock.
             </p>
         </div>
     </section>
 
 
-    <section class="pt-2">
+    <section class="pt-2 mb-6">
         <div class="pb-8 flex flex-col">
-            <h1 class="mb-4 text-base font-extrabold tracking-tight leading-none md:text-xl lg:text-2xl">
-                Esp32 Live Records
-            </h1>
-            <p class="text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-600">
-                See your Esp32 weight recordings update in realtime.
+            <h2 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                ESP32 Live Records
+            </h2>
+            <p class="text-lg font-normal text-gray-600 dark:text-gray-400">
+                See your ESP32 weight recordings update in real-time.
             </p>
         </div>
     </section>
 
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg bg-gray-900 mb-10">
-        <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-white">
-            <thead class="text-sm text-gray-700 uppercase dark:text-white border-b border-gray-600">
+    <div class="relative overflow-x-auto shadow-xl sm:rounded-lg bg-gray-800 dark:bg-gray-900 mb-10 border border-gray-700">
+        <table class="w-full text-sm text-left rtl:text-right text-gray-300 dark:text-gray-200">
+            <thead class="text-xs text-gray-400 uppercase bg-gray-700 dark:bg-gray-900 border-b border-gray-600 dark:border-gray-800">
             <tr>
-                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                <th scope="col" class="px-6 py-3">
                     Cow RFID Tag
                 </th>
                 <th scope="col" class="px-6 py-3">
                     Cow Breed
                 </th>
-                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                <th scope="col" class="px-6 py-3">
                     Gender
                 </th>
                 <th scope="col" class="px-6 py-3">
                     Recorded At
                 </th>
-                <th scope="col" class="px-6 py-3 bg-gray-50 dark:bg-gray-800">
+                <th scope="col" class="px-6 py-3">
                     Weight (Kg)
                 </th>
             </tr>
@@ -51,28 +52,30 @@
             {% if records %}
 
                 {% for record in records %}
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700 dark:hover:bg-gray-700 transition duration-150 ease-in-out">
                         <th scope="row"
-                            class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
-                            {{ record.cow.rfid }}
+                            class="px-6 py-4 font-medium text-white whitespace-nowrap">
+                             <a href="{% url 'web:cow_detail' rfid=record.cow.rfid %}" class="text-blue-400 hover:underline">
+                                {{ record.cow.rfid }}
+                            </a>
                         </th>
                         <td class="px-6 py-4">
                             {{ record.cow.breed }}
                         </td>
-                        <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                        <td class="px-6 py-4">
                             {{ record.cow.get_breed_display }}
                         </td>
                         <td class="px-6 py-4">
                             {{ record.created_at|date:'H:i d/m/Y' }}
                         </td>
-                        <td class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                        <td class="px-6 py-4 font-bold text-blue-400">
                             {{ record.weight }}
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
                         <th scope="row" colspan="5"
-                            class="text-center px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
+                            class="text-center px-6 py-4 font-medium text-gray-400 whitespace-nowrap bg-gray-800">
                             You have no records yet!!
                         </th>
                     </tr>
@@ -85,7 +88,7 @@
     </div>
 
     <div id="toast"
-         class="hidden z-[100] fixed flex items-center w-full max-w-xs p-4 space-x-4 text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-sm right-5 bottom-5 dark:text-gray-200 dark:divide-gray-700 dark:bg-gray-800"
+         class="hidden z-[100] fixed flex items-center w-full max-w-xs p-4 space-x-4 text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-lg right-5 bottom-5 dark:text-gray-200 dark:divide-gray-700 dark:bg-gray-800"
          role="alert">
         <div class="text-base font-normal">
         </div>
@@ -133,7 +136,9 @@
                                             <tr class="border-b border-gray-200 dark:border-gray-700">
                                                 <th scope="row"
                                                     class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap bg-gray-50 dark:text-white dark:bg-gray-800">
-                                                    ${record.cow.rfid}
+                                                    <a href="/cows/${record.cow.rfid}/" class="text-blue-400 hover:underline">
+                                                        ${record.cow.rfid}
+                                                    </a>
                                                 </th>
                                                 <td class="px-6 py-4">
                                                     ${record.cow.breed}
