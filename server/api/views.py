@@ -6,8 +6,8 @@ from rest_framework.response import Response
 from api.serializers import WeightRecordingSerializer
 from core.models import WeightRecording, Cow
 
-PEAK_COW_WEIGHT = 600 * 1000  # 600kg
-SCALE_LIMIT_GRAMS = 10 * 1000  # 10kg
+
+# estimating formular y_kg = 0.4 * x_grams = 500
 
 
 @api_view(["POST"])
@@ -29,11 +29,11 @@ def upload(request):
 	try:
 		weight_grams = float(weight_grams)
 		# Apply the linear mapping formula to estimate cow weight
-		estimated_cow_weight = (PEAK_COW_WEIGHT / SCALE_LIMIT_GRAMS) * weight_grams
+		estimated_cow_weight = 0.8 * weight_grams + 300
 		weight_kg = estimated_cow_weight  # For demonstration
 
 		WeightRecording.objects.create(cow=cow, weight=weight_kg)
-		return Response({'status': 'success', 'message': f'Weight: {weight_kg:.2f}kg'}, status=status.HTTP_201_CREATED)
+		return Response({'status': 'success', 'message': f'Weight: {weight_kg:.2f}kg'}, status=status.HTTP_200_OK)
 
 	except ValueError:
 		return Response({'status': 'error', 'message': 'Invalid weight format'}, status=status.HTTP_400_BAD_REQUEST)

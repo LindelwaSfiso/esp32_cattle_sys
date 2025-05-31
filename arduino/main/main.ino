@@ -38,14 +38,14 @@
 #define PROCESS_BUTTON_PIN 13
 
 // hx711 setup variables
-#define SCALE_CALIBRATION_FACTOR 110.321114
-#define SCALE_OFFSET_FACTOR 458042
+#define SCALE_CALIBRATION_FACTOR 200.246674
+#define SCALE_OFFSET_FACTOR 456154
 
-const char* ssid = "HUAWEI-E456";
-const char* password = "51B7QLRH371";
+const char* ssid = "Nosmilo";
+const char* password = "76645417";
 
 
-String serverName = "http://192.168.8.101:8000";        // Local HTTP Server
+String serverName = "http://192.168.79.144:8000";        // Local HTTP Server
 String uploadServerPath = serverName + "/api/upload/";  // HTTP endpoint for data upload
 
 
@@ -173,7 +173,8 @@ void loop() {
 
     // if we just closed the opening gate
     // we assume there is a cow in the scale therefore change the flag isCowPresentForProcessing to true
-    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen;
+    float weight = getScaleReading();
+    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen && weight > 20;
 
     printGateStatus();
   }
@@ -186,7 +187,8 @@ void loop() {
     operateClosingMotor(!isCloseGateOpen);
 
     // if the gate is open, we assume there is no cow for processing, visa versa
-    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen;
+    float weight = getScaleReading();
+    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen && weight > 20;
 
     printGateStatus();
   }
@@ -276,14 +278,17 @@ void readValuesAndUpload() {
     // server upload was successful,
     Serial.println("Done Upload.... Open the closing gate.......");
 
-    operateClosingMotor(!isCloseGateOpen);
-
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Upload successful");
     lcd.setCursor(0, 1);
     lcd.print("opening C. Gate..");
     delay(2000);
+
+    operateClosingMotor(!isCloseGateOpen);
+
+    // update safety state
+    isCowPresentForProcessing = !isOpenGateOpen && !isCloseGateOpen;
 
     printGateStatus();
 
